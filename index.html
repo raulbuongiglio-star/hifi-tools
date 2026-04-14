@@ -622,6 +622,196 @@
             box-shadow: 0 6px 25px rgba(200, 146, 26, 0.5);
         }
 
+        /* Archive Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal {
+            background: white;
+            border-radius: 15px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .modal-header {
+            padding: 20px;
+            background: var(--navy);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .archive-list {
+            list-style: none;
+        }
+        
+        .archive-item {
+            padding: 15px;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .archive-item:hover {
+            background: var(--gray-100);
+        }
+        
+        .archive-item-info {
+            flex: 1;
+            cursor: pointer;
+        }
+        
+        .archive-item-title {
+            font-weight: 600;
+            color: var(--navy);
+        }
+        
+        .archive-item-meta {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 3px;
+        }
+        
+        .archive-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .archive-item-actions button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .btn-load {
+            background: var(--gold);
+            color: white;
+        }
+        
+        .btn-delete {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .archive-empty {
+            text-align: center;
+            padding: 40px;
+            color: var(--gray-500);
+        }
+        
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .modal-footer button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-export {
+            background: var(--navy);
+            color: white;
+        }
+        
+        .btn-import {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+        
+        /* Control buttons */
+        .btn-save {
+            background: linear-gradient(135deg, var(--success), #238b4a);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(45, 138, 78, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .btn-archive {
+            background: linear-gradient(135deg, var(--navy), #2a3557);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(28, 35, 64, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .print-controls {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            z-index: 100;
+        }
+
         /* Print Styles */
         @media print {
             * {
@@ -923,9 +1113,35 @@
 
     <!-- Print Controls -->
     <div class="print-controls">
-        <button class="btn-print" onclick="window.print()">
-            🖨️ Stampa Preventivo
+        <button class="btn-save" onclick="savePreventivo()">
+            💾 Salva
         </button>
+        <button class="btn-archive" onclick="openArchive()">
+            📁 Archivio
+        </button>
+        <button class="btn-print" onclick="window.print()">
+            🖨️ Stampa
+        </button>
+    </div>
+    
+    <!-- Archive Modal -->
+    <div class="modal-overlay" id="archiveModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>📁 Archivio Preventivi</h2>
+                <button class="modal-close" onclick="closeArchive()">×</button>
+            </div>
+            <div class="modal-body">
+                <ul class="archive-list" id="archiveList">
+                    <!-- Populated by JS -->
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-export" onclick="exportArchive()">📤 Esporta Backup</button>
+                <button class="btn-import" onclick="document.getElementById('importFile').click()">📥 Importa</button>
+                <input type="file" id="importFile" accept=".json" style="display:none" onchange="importArchive(this)">
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1068,6 +1284,201 @@
             `;
             grid.appendChild(newSlot);
         }
+        
+        // ========== ARCHIVIO PREVENTIVI ==========
+        
+        function collectFormData() {
+            const data = {
+                id: Date.now(),
+                date: document.getElementById('quoteDate').value,
+                number: document.getElementById('quoteNumber').value,
+                client: {
+                    name: document.querySelector('.section-box input[placeholder="Nome / Ragione Sociale"]').value,
+                    address: document.querySelector('.section-box input[placeholder="Indirizzo"]').value,
+                    city: document.querySelector('.section-box input[placeholder="CAP, Città, Provincia"]').value,
+                    fiscalCode: document.querySelector('.section-box input[placeholder="Codice Fiscale / P.IVA"]').value,
+                    phone: document.querySelector('.section-box input[placeholder="Telefono"]').value,
+                    email: document.querySelector('.section-box input[placeholder="Email"]').value,
+                    notes: document.querySelector('.section-box textarea[placeholder="Note cliente..."]').value
+                },
+                products: [],
+                notes: document.querySelector('.notes-section textarea').value,
+                grandTotal: document.getElementById('grandTotal').textContent
+            };
+            
+            // Collect products
+            document.querySelectorAll('#productsBody tr').forEach(row => {
+                data.products.push({
+                    name: row.querySelector('.product-name').value,
+                    qty: row.querySelector('.qty-input').value,
+                    price: row.querySelector('.price-input').value,
+                    discount: row.querySelector('.discount-input').value
+                });
+            });
+            
+            return data;
+        }
+        
+        function populateForm(data) {
+            document.getElementById('quoteDate').value = data.date || '';
+            document.getElementById('quoteNumber').value = data.number || '';
+            
+            // Client info
+            document.querySelector('.section-box input[placeholder="Nome / Ragione Sociale"]').value = data.client?.name || '';
+            document.querySelector('.section-box input[placeholder="Indirizzo"]').value = data.client?.address || '';
+            document.querySelector('.section-box input[placeholder="CAP, Città, Provincia"]').value = data.client?.city || '';
+            document.querySelector('.section-box input[placeholder="Codice Fiscale / P.IVA"]').value = data.client?.fiscalCode || '';
+            document.querySelector('.section-box input[placeholder="Telefono"]').value = data.client?.phone || '';
+            document.querySelector('.section-box input[placeholder="Email"]').value = data.client?.email || '';
+            document.querySelector('.section-box textarea[placeholder="Note cliente..."]').value = data.client?.notes || '';
+            
+            // Notes
+            document.querySelector('.notes-section textarea').value = data.notes || '';
+            
+            // Products - clear and recreate
+            const tbody = document.getElementById('productsBody');
+            tbody.innerHTML = '';
+            rowCounter = 0;
+            
+            if (data.products && data.products.length > 0) {
+                data.products.forEach((prod, index) => {
+                    rowCounter++;
+                    const newRow = document.createElement('tr');
+                    newRow.innerHTML = `
+                        <td>${rowCounter}</td>
+                        <td class="product-cell"><textarea class="product-name" placeholder="Nome prodotto e descrizione..." rows="2">${prod.name || ''}</textarea></td>
+                        <td><input type="number" class="qty-input" value="${prod.qty || 1}" min="1" onchange="calculateTotals()"></td>
+                        <td><input type="number" class="price-input" value="${prod.price || ''}" step="0.01" min="0" onchange="calculateTotals()"></td>
+                        <td><input type="number" class="discount-input" value="${prod.discount || ''}" min="0" max="100" onchange="calculateTotals()"></td>
+                        <td class="row-total">€ 0,00</td>
+                        <td><button class="btn-remove" onclick="removeRow(this)">✕</button></td>
+                    `;
+                    tbody.appendChild(newRow);
+                });
+            } else {
+                // Add empty row
+                rowCounter = 1;
+                const newRow = document.createElement('tr');
+                newRow.innerHTML = `
+                    <td>1</td>
+                    <td class="product-cell"><textarea class="product-name" placeholder="Nome prodotto e descrizione..." rows="2"></textarea></td>
+                    <td><input type="number" class="qty-input" value="1" min="1" onchange="calculateTotals()"></td>
+                    <td><input type="number" class="price-input" placeholder="0,00" step="0.01" min="0" onchange="calculateTotals()"></td>
+                    <td><input type="number" class="discount-input" placeholder="0" min="0" max="100" onchange="calculateTotals()"></td>
+                    <td class="row-total">€ 0,00</td>
+                    <td><button class="btn-remove" onclick="removeRow(this)">✕</button></td>
+                `;
+                tbody.appendChild(newRow);
+            }
+            
+            calculateTotals();
+        }
+        
+        function savePreventivo() {
+            const data = collectFormData();
+            
+            // Get client name for display
+            const clientName = data.client.name || 'Senza nome';
+            data.displayName = clientName + ' - ' + data.number;
+            data.savedAt = new Date().toISOString();
+            
+            // Get existing archive
+            let archive = JSON.parse(localStorage.getItem('hifi_preventivi') || '[]');
+            
+            // Add new entry
+            archive.unshift(data);
+            
+            // Save
+            localStorage.setItem('hifi_preventivi', JSON.stringify(archive));
+            
+            alert('✅ Preventivo salvato!\n\n' + data.displayName);
+        }
+        
+        function openArchive() {
+            const archive = JSON.parse(localStorage.getItem('hifi_preventivi') || '[]');
+            const list = document.getElementById('archiveList');
+            
+            if (archive.length === 0) {
+                list.innerHTML = '<div class="archive-empty">📭 Nessun preventivo salvato</div>';
+            } else {
+                list.innerHTML = archive.map((item, index) => `
+                    <li class="archive-item">
+                        <div class="archive-item-info" onclick="loadPreventivo(${index})">
+                            <div class="archive-item-title">${item.displayName || 'Preventivo ' + item.number}</div>
+                            <div class="archive-item-meta">
+                                ${new Date(item.savedAt).toLocaleDateString('it-IT')} • ${item.grandTotal}
+                            </div>
+                        </div>
+                        <div class="archive-item-actions">
+                            <button class="btn-load" onclick="loadPreventivo(${index})">Carica</button>
+                            <button class="btn-delete" onclick="deletePreventivo(${index})">🗑️</button>
+                        </div>
+                    </li>
+                `).join('');
+            }
+            
+            document.getElementById('archiveModal').classList.add('active');
+        }
+        
+        function closeArchive() {
+            document.getElementById('archiveModal').classList.remove('active');
+        }
+        
+        function loadPreventivo(index) {
+            const archive = JSON.parse(localStorage.getItem('hifi_preventivi') || '[]');
+            if (archive[index]) {
+                populateForm(archive[index]);
+                closeArchive();
+            }
+        }
+        
+        function deletePreventivo(index) {
+            if (confirm('Eliminare questo preventivo dall\'archivio?')) {
+                let archive = JSON.parse(localStorage.getItem('hifi_preventivi') || '[]');
+                archive.splice(index, 1);
+                localStorage.setItem('hifi_preventivi', JSON.stringify(archive));
+                openArchive(); // Refresh list
+            }
+        }
+        
+        function exportArchive() {
+            const archive = localStorage.getItem('hifi_preventivi') || '[]';
+            const blob = new Blob([archive], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'hifi-preventivi-backup-' + new Date().toISOString().slice(0,10) + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function importArchive(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const imported = JSON.parse(e.target.result);
+                        if (Array.isArray(imported)) {
+                            const existing = JSON.parse(localStorage.getItem('hifi_preventivi') || '[]');
+                            const merged = [...imported, ...existing];
+                            localStorage.setItem('hifi_preventivi', JSON.stringify(merged));
+                            alert('✅ Importati ' + imported.length + ' preventivi!');
+                            openArchive();
+                        }
+                    } catch (err) {
+                        alert('❌ File non valido');
+                    }
+                };
+                reader.readAsText(file);
+            }
+            input.value = '';
+        }
+        
+        // Close modal on outside click
+        document.getElementById('archiveModal').addEventListener('click', function(e) {
+            if (e.target === this) closeArchive();
+        });
     </script>
 </body>
 </html>
