@@ -1395,7 +1395,13 @@
                 data: data.date || null,
                 totale: data.grandTotal || '',
                 prodotti: data.products || [],
-                note: data.notes || ''
+                note: JSON.stringify({
+                    indirizzo: data.client.address || '',
+                    citta: data.client.city || '',
+                    codice_fiscale: data.client.fiscalCode || '',
+                    note_cliente: data.client.notes || '',
+                    note_preventivo: data.notes || ''
+                })
             };
             
             try {
@@ -1459,21 +1465,35 @@
         function loadPreventivo(index) {
             const item = archiveData[index];
             if (item) {
+                // Parse JSON fields - prodotti is jsonb (already parsed), note is text (needs parsing)
+                let prodotti = item.prodotti || [];
+                let noteData = {};
+                
+                // Handle prodotti - could be array or string depending on how it was saved
+                if (typeof prodotti === 'string') {
+                    try { prodotti = JSON.parse(prodotti); } catch(e) { prodotti = []; }
+                }
+                
+                // Handle note - text field with JSON
+                try {
+                    noteData = typeof item.note === 'string' ? JSON.parse(item.note) : (item.note || {});
+                } catch(e) { noteData = {}; }
+                
                 // Convert Supabase format to form format
                 const formData = {
                     date: item.data || '',
                     number: item.numero || '',
                     client: {
                         name: item.cliente || '',
-                        address: '',
-                        city: '',
-                        fiscalCode: '',
+                        address: noteData.indirizzo || '',
+                        city: noteData.citta || '',
+                        fiscalCode: noteData.codice_fiscale || '',
                         phone: item.telefono || '',
                         email: item.email || '',
-                        notes: ''
+                        notes: noteData.note_cliente || ''
                     },
-                    products: item.prodotti || [],
-                    notes: item.note || ''
+                    products: prodotti,
+                    notes: noteData.note_preventivo || ''
                 };
                 populateForm(formData);
                 closeArchive();
