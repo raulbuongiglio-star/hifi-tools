@@ -9,6 +9,7 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <meta name="theme-color" content="#1c2340">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <title>Preventivo - HiFi Solution</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -1145,6 +1146,11 @@
     </div>
 
     <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://wxonoacajisuwldhurxa.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_cLt3_mFfR45KCR0fseE44A_YV_R_tbE';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
         // Set today's date
         document.getElementById('quoteDate').valueAsDate = new Date();
 
@@ -1374,50 +1380,76 @@
             calculateTotals();
         }
         
-        function savePreventivo() {
+        // Variable to store loaded archive
+        let archiveData = [];
+        
+        async function savePreventivo() {
             const data = collectFormData();
             
-            // Get client name for display
-            const clientName = data.client.name || 'Senza nome';
-            data.displayName = clientName + ' - ' + data.number;
-            data.savedAt = new Date().toISOString();
+            // Prepare data for Supabase
+            const record = {
+                numero: data.number || '',
+                cliente: data.client.name || '',
+                telefono: data.client.phone || '',
+                email: data.client.email || '',
+                data: data.date || null,
+                totale: data.grandTotal || '',
+                prodotti: data.products || [],
+                note: data.notes || ''
+            };
             
-            // Get existing archive
-            let archive = JSON.parse(localStorage.getItem('hifi_preventivi') || '[]');
-            
-            // Add new entry
-            archive.unshift(data);
-            
-            // Save
-            localStorage.setItem('hifi_preventivi', JSON.stringify(archive));
-            
-            alert('✅ Preventivo salvato!\n\n' + data.displayName);
+            try {
+                const { data: result, error } = await supabase
+                    .from('PREVENTIVI')
+                    .insert([record])
+                    .select();
+                
+                if (error) throw error;
+                
+                alert('✅ Preventivo salvato!\n\n' + (data.client.name || 'Preventivo') + ' - ' + data.number);
+            } catch (err) {
+                console.error('Errore Supabase:', err);
+                alert('❌ Errore nel salvataggio: ' + err.message);
+            }
         }
         
-        function openArchive() {
-            const archive = JSON.parse(localStorage.getItem('hifi_preventivi') || '[]');
+        async function openArchive() {
             const list = document.getElementById('archiveList');
-            
-            if (archive.length === 0) {
-                list.innerHTML = '<div class="archive-empty">📭 Nessun preventivo salvato</div>';
-            } else {
-                list.innerHTML = archive.map((item, index) => `
-                    <li class="archive-item">
-                        <div class="archive-item-info" onclick="loadPreventivo(${index})">
-                            <div class="archive-item-title">${item.displayName || 'Preventivo ' + item.number}</div>
-                            <div class="archive-item-meta">
-                                ${new Date(item.savedAt).toLocaleDateString('it-IT')} • ${item.grandTotal}
-                            </div>
-                        </div>
-                        <div class="archive-item-actions">
-                            <button class="btn-load" onclick="loadPreventivo(${index})">Carica</button>
-                            <button class="btn-delete" onclick="deletePreventivo(${index})">🗑️</button>
-                        </div>
-                    </li>
-                `).join('');
-            }
-            
+            list.innerHTML = '<div class="archive-empty">⏳ Caricamento...</div>';
             document.getElementById('archiveModal').classList.add('active');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('PREVENTIVI')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                archiveData = data || [];
+                
+                if (archiveData.length === 0) {
+                    list.innerHTML = '<div class="archive-empty">📭 Nessun preventivo salvato</div>';
+                } else {
+                    list.innerHTML = archiveData.map((item, index) => `
+                        <li class="archive-item">
+                            <div class="archive-item-info" onclick="loadPreventivo(${index})">
+                                <div class="archive-item-title">${item.cliente || 'Senza nome'} - ${item.numero || 'N/D'}</div>
+                                <div class="archive-item-meta">
+                                    ${item.created_at ? new Date(item.created_at).toLocaleDateString('it-IT') : ''} • ${item.totale || ''}
+                                </div>
+                            </div>
+                            <div class="archive-item-actions">
+                                <button class="btn-load" onclick="loadPreventivo(${index})">Carica</button>
+                                <button class="btn-delete" onclick="deletePreventivo(${item.id})">🗑️</button>
+                            </div>
+                        </li>
+                    `).join('');
+                }
+            } catch (err) {
+                console.error('Errore Supabase:', err);
+                list.innerHTML = '<div class="archive-empty">❌ Errore: ' + err.message + '</div>';
+            }
         }
         
         function closeArchive() {
@@ -1425,49 +1457,101 @@
         }
         
         function loadPreventivo(index) {
-            const archive = JSON.parse(localStorage.getItem('hifi_preventivi') || '[]');
-            if (archive[index]) {
-                populateForm(archive[index]);
+            const item = archiveData[index];
+            if (item) {
+                // Convert Supabase format to form format
+                const formData = {
+                    date: item.data || '',
+                    number: item.numero || '',
+                    client: {
+                        name: item.cliente || '',
+                        address: '',
+                        city: '',
+                        fiscalCode: '',
+                        phone: item.telefono || '',
+                        email: item.email || '',
+                        notes: ''
+                    },
+                    products: item.prodotti || [],
+                    notes: item.note || ''
+                };
+                populateForm(formData);
                 closeArchive();
             }
         }
         
-        function deletePreventivo(index) {
+        async function deletePreventivo(id) {
             if (confirm('Eliminare questo preventivo dall\'archivio?')) {
-                let archive = JSON.parse(localStorage.getItem('hifi_preventivi') || '[]');
-                archive.splice(index, 1);
-                localStorage.setItem('hifi_preventivi', JSON.stringify(archive));
-                openArchive(); // Refresh list
+                try {
+                    const { error } = await supabase
+                        .from('PREVENTIVI')
+                        .delete()
+                        .eq('id', id);
+                    
+                    if (error) throw error;
+                    
+                    openArchive(); // Refresh list
+                } catch (err) {
+                    console.error('Errore Supabase:', err);
+                    alert('❌ Errore eliminazione: ' + err.message);
+                }
             }
         }
         
-        function exportArchive() {
-            const archive = localStorage.getItem('hifi_preventivi') || '[]';
-            const blob = new Blob([archive], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'hifi-preventivi-backup-' + new Date().toISOString().slice(0,10) + '.json';
-            a.click();
-            URL.revokeObjectURL(url);
+        async function exportArchive() {
+            try {
+                const { data, error } = await supabase
+                    .from('PREVENTIVI')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'hifi-preventivi-backup-' + new Date().toISOString().slice(0,10) + '.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error('Errore export:', err);
+                alert('❌ Errore export: ' + err.message);
+            }
         }
         
-        function importArchive(input) {
+        async function importArchive(input) {
             const file = input.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
+                reader.onload = async function(e) {
                     try {
                         const imported = JSON.parse(e.target.result);
                         if (Array.isArray(imported)) {
-                            const existing = JSON.parse(localStorage.getItem('hifi_preventivi') || '[]');
-                            const merged = [...imported, ...existing];
-                            localStorage.setItem('hifi_preventivi', JSON.stringify(merged));
-                            alert('✅ Importati ' + imported.length + ' preventivi!');
+                            // Convert to Supabase format and insert
+                            const records = imported.map(item => ({
+                                numero: item.numero || item.number || '',
+                                cliente: item.cliente || item.client?.name || '',
+                                telefono: item.telefono || item.client?.phone || '',
+                                email: item.email || item.client?.email || '',
+                                data: item.data || item.date || null,
+                                totale: item.totale || item.grandTotal || '',
+                                prodotti: item.prodotti || item.products || [],
+                                note: item.note || item.notes || ''
+                            }));
+                            
+                            const { error } = await supabase
+                                .from('PREVENTIVI')
+                                .insert(records);
+                            
+                            if (error) throw error;
+                            
+                            alert('✅ Importati ' + records.length + ' preventivi!');
                             openArchive();
                         }
                     } catch (err) {
-                        alert('❌ File non valido');
+                        console.error('Errore import:', err);
+                        alert('❌ Errore: ' + err.message);
                     }
                 };
                 reader.readAsText(file);
